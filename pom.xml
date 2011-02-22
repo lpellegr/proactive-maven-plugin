@@ -1,0 +1,124 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.elaunira.pmp</groupId>
+	<artifactId>proactive-maven-plugin</artifactId>
+	<packaging>maven-plugin</packaging>
+	<version>1.0-SNAPSHOT</version>
+
+	<name>proactive-maven-plugin</name>
+	<description>ProActive Stub Generator Maven Plugin</description>
+	<url>https://code.google.com/p/proactive-maven-plugin/</url>
+	<inceptionYear>2010</inceptionYear>
+
+	<prerequisites>
+		<maven>2.2.1</maven>
+	</prerequisites>
+
+	<developers>
+		<developer>
+			<id>laurent.pellegrino</id>
+			<name>Laurent Pellegrino</name>
+			<email>laurent.pellegrino@gmail.com</email>
+			<url>http://www.elaunira.com</url>
+			<roles>
+				<role>Developer</role>
+			</roles>
+		</developer>
+	</developers>
+
+	<licenses>
+		<license>
+			<name>GNU General Public License v3</name>
+			<url>http://www.gnu.org/licenses/gpl.html</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<scm>
+		<connection>scm:hg:https://proactive-maven-plugin.googlecode.com/hg/</connection>
+		<developerConnection>scm:hg:https://proactive-maven-plugin.googlecode.com/hg/</developerConnection>
+		<url>http://code.google.com/p/proactive-maven-plugin/source/browse/</url>
+	</scm>
+
+	<issueManagement>
+		<system>Google Code</system>
+		<url>http://code.google.com/p/proactive-maven-plugin/issues/list</url>
+	</issueManagement>
+
+	<distributionManagement>
+		<repository>
+			<id>proactive-maven-plugin-releases</id>
+			<name>ProActive Maven Plugin Releases</name>
+			<url>dav:https://proactive-maven-plugin.googlecode.com/svn/maven2/repository/releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>proactive-maven-plugin-snapshots</id>
+			<name>ProActive Maven Plugin Snapshots</name>
+			<url>dav:https://proactive-maven-plugin.googlecode.com/svn/maven2/repository/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-plugin-api</artifactId>
+			<version>3.0.1</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.8.2</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<configuration>
+						<source>1.6</source>
+						<target>1.6</target>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-release-plugin</artifactId>
+					<version>2.1</version>
+					<configuration>
+						<mavenExecutorId>forked-path</mavenExecutorId>
+						<tagBase>https://proactive-maven-plugin.googlecode.com/svn/tags/</tagBase>
+						<remoteTagging>true</remoteTagging>
+						<preparationGoals>clean install</preparationGoals>
+						<autoVersionSubmodules>true</autoVersionSubmodules>
+						<goals>deploy</goals>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-javadoc-plugin</artifactId>
+					<version>2.7</version>
+					<executions>
+						<execution>
+							<id>attach-javadocs</id>
+							<goals>
+								<goal>jar</goal>
+							</goals>
+						</execution>
+					</executions>
+					<configuration>
+						<source>1.6</source>
+						<failOnError>true</failOnError>
+						<quiet>true</quiet>
+						<links>
+							<link>http://download.oracle.com/javase/6/docs/api/</link>
+						</links>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+</project>
