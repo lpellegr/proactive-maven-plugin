@@ -61,7 +61,7 @@ public class StubsMojo extends AbstractMojo {
 	public void execute() throws MojoExecutionException, MojoFailureException {
 		boolean containsProActive = false;
 		for (String path : this.projectCompileClasspathElements) {
-			if (path.contains("org/objectweb/proactive/proactive/")) {
+			if (path.contains("org/objectweb/proactive/")) {
 				containsProActive = true;
 				break;
 			}
