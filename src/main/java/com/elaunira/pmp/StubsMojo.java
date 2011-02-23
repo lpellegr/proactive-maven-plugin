@@ -3,7 +3,6 @@ package com.elaunira.pmp;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -14,11 +13,8 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 
-import com.sun.xml.internal.rngom.ast.builder.BuildException;
-
 /**
- * Compiles ProActive stubs and skeleton classes from a remote implementation
- * class.
+ * Mojo used to create ProActive stubs for the specified classes.
  * 
  * @goal stubs
  * @phase compile
@@ -28,8 +24,12 @@ import com.sun.xml.internal.rngom.ast.builder.BuildException;
  */
 public class StubsMojo extends AbstractMojo {
 
-	private static String STUB_GENERATOR_CLASSNAME = "org.objectweb.proactive.ext.util.QuietStubGenerator";
+	private static final String STUB_GENERATOR_CLASSNAME = 
+		"org.objectweb.proactive.core.mop.JavassistByteCodeStubBuilder";
 
+	private static final String STUB_CHECKER_CLASSNAME =
+		"org.objectweb.proactive.core.mop.Utils";
+	
 	/**
 	 * Directory tree where the compiled remote classes are located.
 	 * 
@@ -52,15 +52,16 @@ public class StubsMojo extends AbstractMojo {
 	 */
 	private String[] includes;
 
+	private URLClassLoader classLoader;
+	
 	/**
 	 * {@inheritDoc}
 	 */
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
-		URLClassLoader classLoader = null;
 		boolean containsProActive = false;
-		for (String elem : this.projectCompileClasspathElements) {
-			if (elem.contains("org/objectweb/proactive/proactive/")) {
+		for (String path : this.projectCompileClasspathElements) {
+			if (path.contains("org/objectweb/proactive/proactive/")) {
 				containsProActive = true;
 				break;
 			}
@@ -68,31 +69,22 @@ public class StubsMojo extends AbstractMojo {
 
 		if (!containsProActive) {
 			throw new MojoFailureException(
-					"ProActive library cannot be found in the current maven project classpath.");
+					"ProActive Programming library cannot be found in the classpath.");
 		}
 
 		try {
-			URL[] classpathUrls = new URL[this.projectCompileClasspathElements
-					.size()];
+			URL[] classpathUrls = 
+				new URL[this.projectCompileClasspathElements.size()];
 
 			for (int i = 0; i < this.projectCompileClasspathElements.size(); i++) {
 				classpathUrls[i] = new File(
 						this.projectCompileClasspathElements.get(i)).toURI().toURL();
 			}
 
-			classLoader = new URLClassLoader(classpathUrls);
+			this.classLoader = new URLClassLoader(classpathUrls);
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
-		}
-
-		Class<?> stubGeneratorClass = null;
-		try {
-			stubGeneratorClass = classLoader.loadClass(STUB_GENERATOR_CLASSNAME);
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-
-	
+		}	
 
 		String[] classes = this.includes;
 		if (System.getProperty("class") != null) {
@@ -104,21 +96,8 @@ public class StubsMojo extends AbstractMojo {
 			classes[length] = System.getProperty("class");
 		}
 		
-		
-		
-		
 		for (String clazz : classes) {
 			this.generateClass(clazz);
-//			try {
-//				stubGeneratorMethod.invoke(null, new Object[] { new String[] {
-//						"-srcDir", this.classesDirectory.toString(),
-//						"-destDir", this.classesDirectory.toString(), "-class",
-//						c } });
-//			} catch (IllegalAccessException e) {
-//				e.printStackTrace();
-//			} catch (InvocationTargetException e) {
-//				e.printStackTrace();
-//			}
 		}
 	}
 
@@ -132,22 +111,23 @@ public class StubsMojo extends AbstractMojo {
              data = this.createStub(className);
              stubClassName = this.getStubClassName(className);
 
-             // Write the bytecode into a File
+             // Writes the bytecode into a File
              char sep = File.separatorChar;
              String fileName = new File(
             		 				this.classesDirectory.toString(), 
             		 				stubClassName.replace('.', sep) + ".class").toString();
              try {
                  new File(fileName.substring(0, fileName.lastIndexOf(sep))).mkdirs();
-                 // dump the bytecode into the file
-                 File f = new File(fileName);
-                 FileOutputStream fos = new FileOutputStream(f);
+                 // Dumps the bytecode into the file
+                 FileOutputStream fos = new FileOutputStream(new File(fileName));
                  fos.write(data);
                  fos.flush();
                  fos.close();
-                 System.out.println("Written " + fileName);
-             } catch (IOException e) {
-                 throw new MojoExecutionException("Failed to write stub for " + className + " in " + fileName, e);
+                 
+                 
+                 System.out.println("Generated stub " + fileName);
+             } catch (IOException e) { 
+                 throw new MojoExecutionException("Failed to write stub for '" + className + "' in " + fileName, e);
              }
          } catch (Throwable e) {
              e.printStackTrace();
@@ -157,15 +137,13 @@ public class StubsMojo extends AbstractMojo {
      }
 	
     private byte[] createStub(String className) throws Exception {
-        // Do not import the class since Utils must not depends on the core
-        Class<?> cl = Class.forName("org.objectweb.proactive.core.mop.JavassistByteCodeStubBuilder");
+        Class<?> cl = this.classLoader.loadClass(STUB_GENERATOR_CLASSNAME);
         Method m = cl.getMethod("create", String.class, Class[].class);
         return (byte[]) (m.invoke(null, className, null));
     }
 
     private String getStubClassName(String className) throws Exception {
-        // Do not import the class sinceUtils must not depeonds on the core
-        Class<?> cl = Class.forName("org.objectweb.proactive.core.mop.Utils");
+        Class<?> cl = this.classLoader.loadClass(STUB_CHECKER_CLASSNAME);
         Method m = cl.getMethod("convertClassNameToStubClassName", String.class, Class[].class);
         return (String) (m.invoke(null, className, null));
     }
