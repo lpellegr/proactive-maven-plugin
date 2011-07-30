@@ -65,6 +65,19 @@
 		</dependency>
 	</dependencies>
 
+	<distributionManagement>
+		<repository>
+			<id>proactive-maven-plugin-releases</id>
+			<name>proactive-maven-plugin-releases</name>
+			<url>file:${proactive.plugin.maven.directory}/releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>proactive-maven-plugin-snapshots</id>
+			<name>proactive-maven-plugin-snapshots</name>
+			<url>file:${proactive.plugin.maven.directory}/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+
 	<build>
 		<pluginManagement>
 			<plugins>
