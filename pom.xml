@@ -1,9 +1,11 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.elaunira.pmp</groupId>
+
+	<groupId>org.objectweb.proactive</groupId>
 	<artifactId>proactive-maven-plugin</artifactId>
+	<version>1.0.1-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
-	<version>1.1-SNAPSHOT</version>
 
 	<name>proactive-maven-plugin</name>
 	<description>ProActive Stub Generator Maven Plugin</description>
@@ -11,27 +13,12 @@
 	<inceptionYear>2010</inceptionYear>
 
 	<properties>
-		<pmp.deploy.directory>${basedir}/target/deploy</pmp.deploy.directory>
-		<pmp.src.directory>${basedir}</pmp.src.directory>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
 	<prerequisites>
-		<maven>2.2.1</maven>
+		<maven>3.0.3</maven>
 	</prerequisites>
-
-	<developers>
-		<developer>
-			<id>laurent.pellegrino</id>
-			<name>Laurent Pellegrino</name>
-			<email>laurent.pellegrino@gmail.com</email>
-			<url>http://www.elaunira.com</url>
-			<roles>
-				<role>Developer</role>
-			</roles>
-			<timezone>+1</timezone>
-		</developer>
-	</developers>
 
 	<licenses>
 		<license>
@@ -42,8 +29,8 @@
 	</licenses>
 
 	<scm>
-		<connection>scm:hg:file://${pmp.src.directory}</connection>
-		<developerConnection>scm:hg:file://${pmp.src.directory}</developerConnection>
+		<connection>scm:hg:https://proactive-maven-plugin.googlecode.com/hg/</connection>
+		<developerConnection>scm:hg:https://proactive-maven-plugin.googlecode.com/hg/</developerConnection>
 		<url>http://code.google.com/p/proactive-maven-plugin/source/browse/</url>
 	</scm>
 
@@ -52,44 +39,23 @@
 		<url>http://code.google.com/p/proactive-maven-plugin/issues/list</url>
 	</issueManagement>
 
-    <!--
-	    Creates a settings.xml files in ~/.m2/ and use the following content
-	    to specify where to deploy releases and snapshots
-
-        <?xml version="1.0" encoding="UTF-8"?>
-        <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
-            <profiles>
-                <profile>
-                    <activation>
-	                    <activeByDefault>true</activeByDefault>
-                    </activation>
-                    <id>default</id>
-                    <properties>
-	                    <pmp.deploy.directory>${user.home}/depots-svn/proactive-maven-plugin-maven</pmp.deploy.directory>
-                    </properties>
-                </profile>
-            </profiles>
-            ...
-        </settings>
-	-->
-	<distributionManagement>
-		<repository>
-			<id>proactive-maven-plugin-releases</id>
-			<name>ProActive Maven Plugin Releases</name>
-			<url>file:${pmp.deploy.directory}/releases</url>
-		</repository>
-		<snapshotRepository>
-			<id>proactive-maven-plugin-snapshots</id>
-			<name>ProActive Maven Plugin Snapshots</name>
-			<url>file:${pmp.deploy.directory}/snapshots</url>
-		</snapshotRepository>
-	</distributionManagement>
+	<developers>
+		<developer>
+			<id>laurent.pellegrino</id>
+			<name>Laurent Pellegrino</name>
+			<email>laurent.pellegrino@gmail.com</email>
+			<roles>
+				<role>Developer</role>
+			</roles>
+			<timezone>+1</timezone>
+		</developer>
+	</developers>
 
 	<dependencies>
 		<dependency>
 			<groupId>org.apache.maven</groupId>
 			<artifactId>maven-plugin-api</artifactId>
-			<version>3.0.1</version>
+			<version>3.0.3</version>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
@@ -113,12 +79,12 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-release-plugin</artifactId>
-					<version>2.1</version>
+					<version>2.2</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-javadoc-plugin</artifactId>
-					<version>2.7</version>
+					<version>2.8</version>
 					<executions>
 						<execution>
 							<id>attach-javadocs</id>
