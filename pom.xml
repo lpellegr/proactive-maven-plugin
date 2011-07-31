@@ -1,9 +1,16 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.sonatype.oss</groupId>
+		<artifactId>oss-parent</artifactId>
+		<version>7</version>
+	</parent>
 
 	<groupId>org.objectweb.proactive</groupId>
 	<artifactId>proactive-maven-plugin</artifactId>
-	<version>1.0.1</version>
+	<version>1.0.2-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>proactive-maven-plugin</name>
@@ -30,7 +37,7 @@
 	<scm>
 		<connection>scm:hg:https://proactive-maven-plugin.googlecode.com/hg/</connection>
 		<developerConnection>scm:hg:https://proactive-maven-plugin.googlecode.com/hg/</developerConnection>
-		<url>http://code.google.com/p/proactive-maven-plugin/source/browse/</url>
+		<url>http://proactive-maven-plugin.googlecode.com/hg/</url>
 	</scm>
 
 	<issueManagement>
@@ -63,19 +70,6 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
-
-	<distributionManagement>
-		<repository>
-			<id>proactive-maven-plugin-releases</id>
-			<name>proactive-maven-plugin-releases</name>
-			<url>file:${proactive.plugin.maven.directory}/releases</url>
-		</repository>
-		<snapshotRepository>
-			<id>proactive-maven-plugin-snapshots</id>
-			<name>proactive-maven-plugin-snapshots</name>
-			<url>file:${proactive.plugin.maven.directory}/snapshots</url>
-		</snapshotRepository>
-	</distributionManagement>
 
 	<build>
 		<pluginManagement>
