@@ -16,11 +16,8 @@
  **/
 package org.objectweb.proactive.mavenplugin;
 
-import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
 
@@ -29,11 +26,12 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 
 /**
- * Retrieves the version of the ProActive Programming depencency used in the
+ * Retrieves the version of the ProActive Programming dependency used in the
  * module on which the goal is executed.
  * 
  * @goal version
- * @requiresDependencyResolution compile
+ * @requiresDependencyResolution compile+runtime
+ * @requiresDirectInvocation true
  * 
  * @author lpellegr
  */
@@ -45,57 +43,41 @@ public class VersionMojo extends AbstractMojo {
      * @parameter expression="${project.compileClasspathElements}"
      * @readonly
      */
-    private List<String> projectCompileClasspathElements;
+    private List<String> projectClasspathElements;
 
     /**
      * {@inheritDoc}
      */
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        boolean containsProActive = false;
-        for (String path : this.projectCompileClasspathElements) {
-            if (path.contains("org/objectweb/proactive/")) {
-                containsProActive = true;
-                break;
-            }
-        }
+        URLClassLoader classLoader =
+                Util.createClassLoader(this.projectClasspathElements);
 
-        if (!containsProActive) {
-            System.out.println("ProActive Programming is not used in the current module.");
-        } else {
-            try {
-                URL[] classpathUrls =
-                        new URL[this.projectCompileClasspathElements.size()];
+        Class<?> paVersionClass;
+        try {
+            paVersionClass =
+                    classLoader.loadClass("org.objectweb.proactive.api.PAVersion");
+            Method getProActiveVersionMethod =
+                    paVersionClass.getMethod("getProActiveVersion");
 
-                for (int i = 0; i < this.projectCompileClasspathElements.size(); i++) {
-                    classpathUrls[i] =
-                            new File(
-                                    this.projectCompileClasspathElements.get(i)).toURI()
-                                    .toURL();
-                }
-
-                URLClassLoader classLoader = new URLClassLoader(classpathUrls);
-
-                Class<?> cl =
-                        classLoader.loadClass("org.objectweb.proactive.api.PAVersion");
-                Method m = cl.getMethod("getProActiveVersion");
-                System.out.println("The current module uses ProActive Programming "
-                        + m.invoke(null));
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (IllegalArgumentException e) {
-                e.printStackTrace();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            } catch (SecurityException e) {
-                e.printStackTrace();
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
+            super.getLog().info(
+                    "ProActive Programming "
+                            + getProActiveVersionMethod.invoke(null)
+                            + " detected");
+        } catch (ClassNotFoundException e) {
+            super.getLog()
+                    .info(
+                            "ProActive Programming is not a dependency or a transitive dependency of the current module");
+        } catch (SecurityException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        } catch (NoSuchMethodException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        } catch (IllegalArgumentException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        } catch (IllegalAccessException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        } catch (InvocationTargetException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
         }
     }
 

@@ -19,8 +19,8 @@ package org.objectweb.proactive.mavenplugin;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
@@ -34,24 +34,32 @@ import org.apache.maven.plugin.MojoFailureException;
  * 
  * @goal stubs
  * @phase compile
- * @requiresDependencyResolution compile
+ * @requiresDependencyResolution compile+runtime
  * 
  * @author lpellegr
  */
 public class StubsMojo extends AbstractMojo {
 
-    private static final String STUB_GENERATOR_CLASSNAME =
+    private static final String JAVASSIST_BYTE_CODE_STUB_BUILDER_CLASSNAME =
             "org.objectweb.proactive.core.mop.JavassistByteCodeStubBuilder";
 
-    private static final String STUB_CHECKER_CLASSNAME =
+    private static final String UTILS_CLASSNAME =
             "org.objectweb.proactive.core.mop.Utils";
 
     /**
      * Directory tree where the compiled remote classes are located.
      * 
      * @parameter default-value="${project.build.outputDirectory}"
+     * @readonly
      */
     private File classesDirectory;
+
+    /**
+     * Specifies where to place the generated class files.
+     * 
+     * @parameter default-value="${project.build.outputDirectory}"
+     */
+    private File outputDirectory;
 
     /**
      * Compile classpath of the maven project.
@@ -59,116 +67,135 @@ public class StubsMojo extends AbstractMojo {
      * @parameter expression="${project.compileClasspathElements}"
      * @readonly
      */
-    private List<String> projectCompileClasspathElements;
+    private List<String> projectClasspathElements;
 
     /**
      * A list of inclusions when searching for classes to compile.
      * 
      * @parameter
+     * @required
      */
-    private String[] includes;
+    private List<String> includes;
 
     private URLClassLoader classLoader;
+
+    private Class<?> javassistByteCodeStubBuilderClass;
+
+    private Class<?> utilsClass;
 
     /**
      * {@inheritDoc}
      */
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        boolean containsProActive = false;
-        for (String path : this.projectCompileClasspathElements) {
-            if (path.contains("org/objectweb/proactive/")) {
-                containsProActive = true;
-                break;
-            }
-        }
-
-        if (!containsProActive) {
-            throw new MojoFailureException(
-                    "ProActive Programming library cannot be found in the classpath.");
-        }
+        this.classLoader =
+                Util.createClassLoader(this.projectClasspathElements);
 
         try {
-            URL[] classpathUrls =
-                    new URL[this.projectCompileClasspathElements.size()];
+            this.javassistByteCodeStubBuilderClass =
+                    this.classLoader.loadClass(JAVASSIST_BYTE_CODE_STUB_BUILDER_CLASSNAME);
+            this.utilsClass = this.classLoader.loadClass(UTILS_CLASSNAME);
 
-            for (int i = 0; i < this.projectCompileClasspathElements.size(); i++) {
-                classpathUrls[i] =
-                        new File(this.projectCompileClasspathElements.get(i)).toURI()
-                                .toURL();
-            }
-
-            this.classLoader = new URLClassLoader(classpathUrls);
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-
-        String[] classes = this.includes;
-        if (System.getProperty("class") != null) {
-            int length = this.includes == null
-                    ? 0 : this.includes.length;
-            classes = new String[length + 1];
-            for (int i = 0; i < length; i++) {
-                classes[i] = this.includes[i];
-            }
-            classes[length] = System.getProperty("class");
-        }
-
-        for (String clazz : classes) {
-            this.generateClass(clazz);
-        }
-    }
-
-    public void generateClass(String className) throws MojoExecutionException {
-        String stubClassName = null;
-
-        try {
-            // Generates the bytecode for the class
-            byte[] data;
-
-            data = this.createStub(className);
-            stubClassName = this.getStubClassName(className);
-
-            // Writes the bytecode into a File
-            char sep = File.separatorChar;
-            String fileName =
-                    new File(
-                            this.classesDirectory.toString(),
-                            stubClassName.replace('.', sep) + ".class").toString();
-            try {
-                new File(fileName.substring(0, fileName.lastIndexOf(sep))).mkdirs();
-                // Dumps the bytecode into the file
-                FileOutputStream fos = new FileOutputStream(new File(fileName));
-                fos.write(data);
-                fos.flush();
-                fos.close();
-
-                System.out.println("Generated stub " + fileName);
-            } catch (IOException e) {
-                throw new MojoExecutionException("Failed to write stub for '"
-                        + className + "' in " + fileName, e);
-            }
-        } catch (Throwable e) {
-            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
             throw new MojoExecutionException(
-                    "Stub generation failed for class: " + className, e);
+                    "ProActive Programming is not a dependency or a transitive dependency of the current module");
         }
 
+        for (String className : this.includes) {
+            this.createAndWriteStub(className);
+        }
     }
 
-    private byte[] createStub(String className) throws Exception {
-        Class<?> cl = this.classLoader.loadClass(STUB_GENERATOR_CLASSNAME);
-        Method m = cl.getMethod("create", String.class, Class[].class);
-        return (byte[]) (m.invoke(null, className, null));
+    public void createAndWriteStub(String className)
+            throws MojoExecutionException {
+        // generates the bytecode for the class
+        byte[] data;
+
+        data = this.createStub(className);
+
+        // writes the bytecode into a File
+        String fileName =
+                new File(
+                        this.outputDirectory.toString(), this.getStubClassName(
+                                className).replace('.', File.separatorChar)
+                                + ".class").toString();
+
+        FileOutputStream fos = null;
+        try {
+            new File(fileName.substring(
+                    0, fileName.lastIndexOf(File.separatorChar))).mkdirs();
+
+            // dumps the bytecode into the file
+            fos = new FileOutputStream(new File(fileName));
+            fos.write(data);
+            fos.flush();
+
+            super.getLog().info("Generated stub " + fileName);
+        } catch (IOException e) {
+            super.getLog().error(
+                    "Failed to write stub for '" + className + "' in "
+                            + fileName, e);
+        } finally {
+            try {
+                fos.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
-    private String getStubClassName(String className) throws Exception {
-        Class<?> cl = this.classLoader.loadClass(STUB_CHECKER_CLASSNAME);
-        Method m =
-                cl.getMethod(
-                        "convertClassNameToStubClassName", String.class,
-                        Class[].class);
-        return (String) (m.invoke(null, className, null));
+    private byte[] createStub(String className) throws MojoExecutionException {
+        Method m = null;
+        try {
+            m =
+                    this.javassistByteCodeStubBuilderClass.getMethod(
+                            "create", String.class, Class[].class);
+
+            return (byte[]) (m.invoke(null, className, null));
+        } catch (SecurityException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        } catch (NoSuchMethodException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        } catch (IllegalArgumentException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        } catch (IllegalAccessException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        } catch (InvocationTargetException e) {
+            super.getLog().warn("Could not find class: " + className);
+            super.getLog().info("Within this classpath:");
+
+            for (int it = 0; it < classLoader.getURLs().length; ++it) {
+                URL url = classLoader.getURLs()[it];
+                super.getLog().info(" * " + url.toExternalForm());
+            }
+
+            throw new MojoExecutionException(
+                    "Could not find "
+                            + className
+                            + " on the classpath. Please verify that the class is contain by the current module or by a dependency from the current module");
+        }
+    }
+
+    private String getStubClassName(String className)
+            throws MojoExecutionException {
+        Method m;
+        try {
+            m =
+                    this.utilsClass.getMethod(
+                            "convertClassNameToStubClassName", String.class,
+                            Class[].class);
+            return (String) (m.invoke(null, className, null));
+        } catch (SecurityException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        } catch (NoSuchMethodException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        } catch (IllegalArgumentException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        } catch (IllegalAccessException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        } catch (InvocationTargetException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        }
     }
 
     /**
@@ -186,7 +213,7 @@ public class StubsMojo extends AbstractMojo {
      * @return a list containing the project classpath elements.
      */
     public List<String> getProjectClasspathElements() {
-        return this.projectCompileClasspathElements;
+        return this.projectClasspathElements;
     }
 
 }
