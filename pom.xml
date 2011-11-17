@@ -15,7 +15,7 @@
 
 	<name>proactive-maven-plugin</name>
 	<description>ProActive Stub Generator Maven Plugin</description>
-	<url>https://code.google.com/p/proactive-maven-plugin/</url>
+	<url>https://bitbucket.org/lp/proactive-maven-plugin</url>
 	<inceptionYear>2010</inceptionYear>
 
 	<properties>
@@ -35,9 +35,9 @@
 	</licenses>
 
 	<scm>
-		<connection>scm:hg:https://proactive-maven-plugin.googlecode.com/hg/</connection>
-		<developerConnection>scm:hg:https://proactive-maven-plugin.googlecode.com/hg/</developerConnection>
-		<url>http://proactive-maven-plugin.googlecode.com/hg/</url>
+		<connection>scm:hg:https://bitbucket.org/lp/proactive-maven-plugin</connection>
+		<developerConnection>scm:hg:https://bitbucket.org/lp/proactive-maven-plugin</developerConnection>
+		<url>https://bitbucket.org/lp/proactive-maven-plugin</url>
 	</scm>
 
 	<distributionManagement>
@@ -54,11 +54,20 @@
 	</distributionManagement>
 
 	<issueManagement>
-		<system>Google Code</system>
-		<url>http://code.google.com/p/proactive-maven-plugin/issues/list</url>
+		<system>Bitbucket</system>
+		<url>https://bitbucket.org/lp/proactive-maven-plugin/issues</url>
 	</issueManagement>
 
 	<developers>
+		<developer>
+			<id>bsauvan</id>
+			<name>Bastien Sauvan</name>
+			<email>bastien.sauvan@inria.fr</email>
+			<roles>
+				<role>Developer</role>
+			</roles>
+			<timezone>+1</timezone>
+		</developer>
 		<developer>
 			<id>lpellegr</id>
 			<name>Laurent Pellegrino</name>
