@@ -17,8 +17,6 @@
 package org.objectweb.proactive.mavenplugin;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -106,42 +104,21 @@ public class StubsMojo extends AbstractMojo {
         }
     }
 
-    public void createAndWriteStub(String className)
-            throws MojoExecutionException {
+    public void createAndWriteStub(String className) {
         // generates the bytecode for the class
-        byte[] data;
-
-        data = this.createStub(className);
-
-        // writes the bytecode into a File
-        String fileName =
-                new File(
-                        this.outputDirectory.toString(), this.getStubClassName(
-                                className).replace('.', File.separatorChar)
-                                + ".class").toString();
-
-        FileOutputStream fos = null;
         try {
-            new File(fileName.substring(
-                    0, fileName.lastIndexOf(File.separatorChar))).mkdirs();
+            byte[] data = this.createStub(className);
 
-            // dumps the bytecode into the file
-            fos = new FileOutputStream(new File(fileName));
-            fos.write(data);
-            fos.flush();
+            Util.writeClass(
+                    this.outputDirectory, this.getStubClassName(className),
+                    data);
 
-            super.getLog().info("Generated stub " + fileName);
-        } catch (IOException e) {
+            super.getLog().info("Generated ProActive stub " + className);
+        } catch (Exception e) {
             super.getLog().error(
-                    "Failed to write stub for '" + className + "' in "
-                            + fileName, e);
-        } finally {
-            try {
-                fos.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+                    "Failed to generate ProActive stub " + className, e);
         }
+
     }
 
     private byte[] createStub(String className) throws MojoExecutionException {
@@ -164,15 +141,15 @@ public class StubsMojo extends AbstractMojo {
             super.getLog().warn("Could not find class: " + className);
             super.getLog().info("Within this classpath:");
 
-            for (int it = 0; it < classLoader.getURLs().length; ++it) {
-                URL url = classLoader.getURLs()[it];
+            for (int it = 0; it < this.classLoader.getURLs().length; ++it) {
+                URL url = this.classLoader.getURLs()[it];
                 super.getLog().info(" * " + url.toExternalForm());
             }
 
             throw new MojoExecutionException(
                     "Could not find "
                             + className
-                            + " on the classpath. Please verify that the class is contain by the current module or by a dependency from the current module");
+                            + " on the classpath. Please verify that the class is contained by the current module or by a dependency from the current module");
         }
     }
 
