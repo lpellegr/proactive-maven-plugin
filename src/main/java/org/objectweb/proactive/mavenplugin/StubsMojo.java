@@ -16,56 +16,27 @@
  **/
 package org.objectweb.proactive.mavenplugin;
 
-import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.URL;
-import java.net.URLClassLoader;
+import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 
 /**
  * Mojo used to create ProActive stubs for the specified classes.
  * 
  * @goal stubs
- * @phase compile
- * @requiresDependencyResolution compile+runtime
  * 
  * @author lpellegr
+ * @author bsauvan
  */
-public class StubsMojo extends AbstractMojo {
-
-    private static final String JAVASSIST_BYTE_CODE_STUB_BUILDER_CLASSNAME =
-            "org.objectweb.proactive.core.mop.JavassistByteCodeStubBuilder";
+public class StubsMojo extends AbstractClassesMojo {
 
     private static final String UTILS_CLASSNAME =
             "org.objectweb.proactive.core.mop.Utils";
 
-    /**
-     * Directory tree where the compiled remote classes are located.
-     * 
-     * @parameter default-value="${project.build.outputDirectory}"
-     * @readonly
-     */
-    private File classesDirectory;
-
-    /**
-     * Specifies where to place the generated class files.
-     * 
-     * @parameter default-value="${project.build.outputDirectory}"
-     */
-    private File outputDirectory;
-
-    /**
-     * Compile classpath of the maven project.
-     * 
-     * @parameter expression="${project.compileClasspathElements}"
-     * @readonly
-     */
-    private List<String> projectClasspathElements;
+    private static final String JAVASSIST_BYTE_CODE_STUB_BUILDER_CLASSNAME =
+            "org.objectweb.proactive.core.mop.JavassistByteCodeStubBuilder";
 
     /**
      * A list of inclusions when searching for classes to compile.
@@ -75,122 +46,71 @@ public class StubsMojo extends AbstractMojo {
      */
     private List<String> includes;
 
-    private URLClassLoader classLoader;
+    private Class<?> utilsClass;
 
     private Class<?> javassistByteCodeStubBuilderClass;
 
-    private Class<?> utilsClass;
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
-        this.classLoader =
-                Util.createClassLoader(this.projectClasspathElements);
-
+    protected void init() throws MojoExecutionException {
         try {
+            this.utilsClass = this.classLoader.loadClass(UTILS_CLASSNAME);
             this.javassistByteCodeStubBuilderClass =
                     this.classLoader.loadClass(JAVASSIST_BYTE_CODE_STUB_BUILDER_CLASSNAME);
-            this.utilsClass = this.classLoader.loadClass(UTILS_CLASSNAME);
-
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException cnfe) {
             throw new MojoExecutionException(
                     "ProActive Programming is not a dependency or a transitive dependency of the current module");
         }
-
-        for (String className : this.includes) {
-            this.createAndWriteStub(className);
-        }
     }
 
-    public void createAndWriteStub(String className) {
-        // generates the bytecode for the class
-        try {
-            byte[] data = this.createStub(className);
+    protected List<String> getClassNames() throws MojoExecutionException {
+        List<String> classNames = new ArrayList<String>();
 
-            Util.writeClass(
-                    this.outputDirectory, this.getStubClassName(className),
-                    data);
-
-            super.getLog().info("Generated ProActive stub " + className);
-        } catch (Exception e) {
-            super.getLog().error(
-                    "Failed to generate ProActive stub " + className, e);
+        for (String include : this.includes) {
+            classNames.add(this.getStubClassName(include));
         }
 
-    }
-
-    private byte[] createStub(String className) throws MojoExecutionException {
-        Method m = null;
-        try {
-            m =
-                    this.javassistByteCodeStubBuilderClass.getMethod(
-                            "create", String.class, Class[].class);
-
-            return (byte[]) (m.invoke(null, className, null));
-        } catch (SecurityException e) {
-            throw new MojoExecutionException(e.getMessage(), e);
-        } catch (NoSuchMethodException e) {
-            throw new MojoExecutionException(e.getMessage(), e);
-        } catch (IllegalArgumentException e) {
-            throw new MojoExecutionException(e.getMessage(), e);
-        } catch (IllegalAccessException e) {
-            throw new MojoExecutionException(e.getMessage(), e);
-        } catch (InvocationTargetException e) {
-            super.getLog().warn("Could not find class: " + className);
-            super.getLog().info("Within this classpath:");
-
-            for (int it = 0; it < this.classLoader.getURLs().length; ++it) {
-                URL url = this.classLoader.getURLs()[it];
-                super.getLog().info(" * " + url.toExternalForm());
-            }
-
-            throw new MojoExecutionException(
-                    "Could not find "
-                            + className
-                            + " on the classpath. Please verify that the class is contained by the current module or by a dependency from the current module");
-        }
+        return classNames;
     }
 
     private String getStubClassName(String className)
             throws MojoExecutionException {
-        Method m;
         try {
-            m =
+            Method convertClassNameToStubClassNameMethod =
                     this.utilsClass.getMethod(
                             "convertClassNameToStubClassName", String.class,
                             Class[].class);
-            return (String) (m.invoke(null, className, null));
-        } catch (SecurityException e) {
-            throw new MojoExecutionException(e.getMessage(), e);
-        } catch (NoSuchMethodException e) {
-            throw new MojoExecutionException(e.getMessage(), e);
-        } catch (IllegalArgumentException e) {
-            throw new MojoExecutionException(e.getMessage(), e);
-        } catch (IllegalAccessException e) {
-            throw new MojoExecutionException(e.getMessage(), e);
-        } catch (InvocationTargetException e) {
+
+            return (String) (convertClassNameToStubClassNameMethod.invoke(
+                    null, className, null));
+        } catch (Exception e) {
             throw new MojoExecutionException(e.getMessage(), e);
         }
     }
 
-    /**
-     * Get the directory where the project classes are located.
-     * 
-     * @return the project classes directory.
-     */
-    public File getClassesDirectory() {
-        return this.classesDirectory;
+    protected byte[] generateClass(String className) throws Exception {
+        Method createMethod =
+                javassistByteCodeStubBuilderClass.getMethod(
+                        "create", String.class, Class[].class);
+
+        return (byte[]) (createMethod.invoke(
+                null, this.getObjectClassName(className), null));
     }
 
-    /**
-     * Get the list of classpath elements for the project.
-     * 
-     * @return a list containing the project classpath elements.
-     */
-    public List<String> getProjectClasspathElements() {
-        return this.projectClasspathElements;
+    private String getObjectClassName(String stubClassName)
+            throws MojoExecutionException {
+        try {
+            Method convertClassNameToStubClassNameMethod =
+                    this.utilsClass.getMethod(
+                            "convertStubClassNameToClassName", String.class);
+
+            return (String) (convertClassNameToStubClassNameMethod.invoke(
+                    null, stubClassName));
+        } catch (Exception e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        }
+    }
+
+    protected String getKind() {
+        return "ProActive stub";
     }
 
 }

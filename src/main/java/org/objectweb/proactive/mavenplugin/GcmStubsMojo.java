@@ -21,36 +21,23 @@ import java.io.FileFilter;
 import java.io.FileReader;
 import java.io.Reader;
 import java.lang.reflect.Method;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamReader;
 
-import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugin.logging.Log;
-import org.apache.maven.plugin.logging.SystemStreamLog;
 
 /**
  * Mojo used to create ProActive/GCM stubs (representative of component
  * interfaces).
  * 
  * @goal gcm-stubs
- * @phase compile
- * @requiresDependencyResolution compile+runtime
  * 
  * @author bsauvan
  */
-public class GcmStubsMojo extends AbstractMojo {
+public class GcmStubsMojo extends AbstractClassesMojo {
 
     private static final String UTILS_CLASSNAME =
             "org.objectweb.proactive.core.component.gen.Utils";
@@ -61,6 +48,8 @@ public class GcmStubsMojo extends AbstractMojo {
 
     private static final String SIGNATURE_ATTRIBUTE = "signature";
 
+    private Class<?> utilsClass;
+
     /**
      * Directory tree where the compiled remote classes are located.
      * 
@@ -69,31 +58,16 @@ public class GcmStubsMojo extends AbstractMojo {
      */
     private File classesDirectory;
 
-    /**
-     * Specifies where to place the generated class files.
-     * 
-     * @parameter default-value="${project.build.outputDirectory}"
-     */
-    private File outputDirectory;
+    protected void init() throws MojoExecutionException {
+        try {
+            this.utilsClass = this.classLoader.loadClass(UTILS_CLASSNAME);
+        } catch (ClassNotFoundException cnfe) {
+            throw new MojoExecutionException(
+                    "ProActive Programming is not a dependency or a transitive dependency of the current module");
+        }
+    }
 
-    /**
-     * Compile classpath of the maven project.
-     * 
-     * @parameter expression="${project.compileClasspathElements}"
-     * @readonly
-     */
-    private List<String> projectClasspathElements;
-
-    private URLClassLoader classLoader;
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
-        this.classLoader =
-                Util.createClassLoader(this.projectClasspathElements);
-
+    protected List<String> getClassNames() throws MojoExecutionException {
         // gets all fractal files
         final ArrayList<File> fractalFiles = new ArrayList<File>();
         this.classesDirectory.listFiles(new FileFilter() {
@@ -110,14 +84,13 @@ public class GcmStubsMojo extends AbstractMojo {
         });
 
         // parses all fractal files
-        Set<String> stubClassNames = new HashSet<String>();
         try {
-            final XMLInputFactory factory = XMLInputFactory.newInstance();
-            Class<?> utilsClass = this.classLoader.loadClass(UTILS_CLASSNAME);
             Method utilsMethod =
-                    utilsClass.getMethod(
+                    this.utilsClass.getMethod(
                             "getMetaObjectComponentRepresentativeClassName",
                             String.class, String.class);
+            List<String> stubClassNames = new ArrayList<String>();
+            XMLInputFactory factory = XMLInputFactory.newInstance();
 
             for (File fractalFile : fractalFiles) {
                 Reader reader = new FileReader(fractalFile);
@@ -145,81 +118,22 @@ public class GcmStubsMojo extends AbstractMojo {
                     }
                 }
             }
-        } catch (ClassNotFoundException cnfe) {
-            throw new MojoExecutionException(
-                    "ProActive Programming is not a dependency or a transitive dependency of the current module");
+
+            return stubClassNames;
         } catch (Exception e) {
             throw new MojoExecutionException(e.getMessage(), e);
         }
-
-        // creates thread pool
-        ExecutorService executorService =
-                Executors.newFixedThreadPool(Runtime.getRuntime()
-                        .availableProcessors(), new ThreadFactory() {
-                    @Override
-                    public Thread newThread(final Runnable r) {
-                        Thread thread = new Thread(r);
-                        try {
-                            thread.setContextClassLoader(classLoader);
-                        } catch (SecurityException se) {
-                            Log log = new SystemStreamLog();
-                            log.error("Failed to set context class loader", se);
-                        }
-                        return thread;
-                    }
-                });
-
-        // submits all generators
-        for (final String stubClassName : stubClassNames) {
-            try {
-                this.classLoader.loadClass(stubClassName);
-            } catch (ClassNotFoundException cnfe) {
-                executorService.submit(new GcmStubGenerator(
-                        super.getLog(), stubClassName, this.outputDirectory));
-            }
-        }
-
-        // awaits termination
-        try {
-            executorService.shutdown();
-            executorService.awaitTermination(2, TimeUnit.MINUTES);
-        } catch (InterruptedException ie) {
-            throw new MojoExecutionException(ie.getMessage(), ie);
-        }
     }
 
-    static final class GcmStubGenerator implements Runnable {
+    protected byte[] generateClass(String className) throws Exception {
+        Method getClassDataMethod =
+                this.utilsClass.getMethod("getClassData", String.class);
 
-        final Log log;
+        return (byte[]) getClassDataMethod.invoke(null, className);
+    }
 
-        final String className;
-
-        final File outputDirectory;
-
-        public GcmStubGenerator(Log log, String className, File outputDirectory) {
-            this.log = log;
-            this.className = className;
-            this.outputDirectory = outputDirectory;
-        }
-
-        @Override
-        public void run() {
-            try {
-                ClassLoader classLoader =
-                        Thread.currentThread().getContextClassLoader();
-                Class<?> clazz = classLoader.loadClass(UTILS_CLASSNAME);
-                Method method = clazz.getMethod("getClassData", String.class);
-                byte[] data = (byte[]) method.invoke(null, this.className);
-
-                Util.writeClass(this.outputDirectory, this.className, data);
-
-                this.log.info("Generated ProActive/GCM stub " + this.className);
-            } catch (Exception e) {
-                this.log.error("Failed to generate ProActive/GCM stub "
-                        + this.className, e);
-            }
-        }
-
+    protected String getKind() {
+        return "ProActive/GCM stub";
     }
 
 }
