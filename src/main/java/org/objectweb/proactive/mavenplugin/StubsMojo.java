@@ -46,67 +46,62 @@ public class StubsMojo extends AbstractClassesMojo {
      */
     private List<String> includes;
 
-    private Class<?> utilsClass;
+    private Method createMethod;
 
-    private Class<?> javassistByteCodeStubBuilderClass;
+    private Method convertClassNameToStubClassNameMethod;
+
+    private Method convertStubClassNameToClassNameMethod;
 
     protected void init() throws MojoExecutionException {
         try {
-            this.utilsClass = this.classLoader.loadClass(UTILS_CLASSNAME);
-            this.javassistByteCodeStubBuilderClass =
+            Class<?> utilsClass = this.classLoader.loadClass(UTILS_CLASSNAME);
+            this.convertClassNameToStubClassNameMethod =
+                    utilsClass.getMethod(
+                            "convertClassNameToStubClassName", String.class,
+                            Class[].class);
+            this.convertStubClassNameToClassNameMethod =
+                    utilsClass.getMethod(
+                            "convertStubClassNameToClassName", String.class);
+            Class<?> javassistByteCodeStubBuilderClass =
                     this.classLoader.loadClass(JAVASSIST_BYTE_CODE_STUB_BUILDER_CLASSNAME);
+            this.createMethod =
+                    javassistByteCodeStubBuilderClass.getMethod(
+                            "create", String.class, Class[].class);
         } catch (ClassNotFoundException cnfe) {
             throw new MojoExecutionException(
                     "ProActive Programming is not a dependency or a transitive dependency of the current module");
+        } catch (Exception e) {
+            throw new MojoExecutionException(e.getMessage(), e);
         }
     }
 
     protected List<String> getClassNames() throws MojoExecutionException {
-        List<String> classNames = new ArrayList<String>();
-
-        for (String include : this.includes) {
-            classNames.add(this.getStubClassName(include));
-        }
-
-        return classNames;
-    }
-
-    private String getStubClassName(String className)
-            throws MojoExecutionException {
         try {
-            Method convertClassNameToStubClassNameMethod =
-                    this.utilsClass.getMethod(
-                            "convertClassNameToStubClassName", String.class,
-                            Class[].class);
+            List<String> classNames = new ArrayList<String>();
 
-            return (String) (convertClassNameToStubClassNameMethod.invoke(
-                    null, className, null));
+            for (String include : this.includes) {
+                classNames.add(this.getStubClassName(include));
+            }
+
+            return classNames;
         } catch (Exception e) {
             throw new MojoExecutionException(e.getMessage(), e);
         }
+    }
+
+    private String getStubClassName(String className) throws Exception {
+        return (String) (this.convertClassNameToStubClassNameMethod.invoke(
+                null, className, null));
     }
 
     protected byte[] generateClass(String className) throws Exception {
-        Method createMethod =
-                javassistByteCodeStubBuilderClass.getMethod(
-                        "create", String.class, Class[].class);
-
-        return (byte[]) (createMethod.invoke(
+        return (byte[]) (this.createMethod.invoke(
                 null, this.getObjectClassName(className), null));
     }
 
-    private String getObjectClassName(String stubClassName)
-            throws MojoExecutionException {
-        try {
-            Method convertClassNameToStubClassNameMethod =
-                    this.utilsClass.getMethod(
-                            "convertStubClassNameToClassName", String.class);
-
-            return (String) (convertClassNameToStubClassNameMethod.invoke(
-                    null, stubClassName));
-        } catch (Exception e) {
-            throw new MojoExecutionException(e.getMessage(), e);
-        }
+    private String getObjectClassName(String stubClassName) throws Exception {
+        return (String) (this.convertStubClassNameToClassNameMethod.invoke(
+                null, stubClassName));
     }
 
     protected String getKind() {
