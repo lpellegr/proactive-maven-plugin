@@ -30,7 +30,7 @@ import org.apache.maven.plugin.MojoExecutionException;
  * @author lpellegr
  * @author bsauvan
  */
-public class StubsMojo extends AbstractClassesMojo {
+public class StubsMojo extends AbstractClassGeneratorMojo {
 
     private static final String UTILS_CLASSNAME =
             "org.objectweb.proactive.core.mop.Utils";

@@ -36,7 +36,7 @@ import org.apache.maven.plugin.MojoFailureException;
  * @author lpellegr
  * @author bsauvan
  */
-public abstract class AbstractClassesMojo extends AbstractMojo {
+public abstract class AbstractClassGeneratorMojo extends AbstractMojo {
 
     /**
      * Compile classpath of the maven project.

@@ -39,7 +39,7 @@ import org.apache.maven.plugin.MojoExecutionException;
  * 
  * @author bsauvan
  */
-public class GcmMojo extends AbstractClassesMojo {
+public class GcmMojo extends AbstractClassGeneratorMojo {
 
     private static final String UTILS_CLASSNAME =
             "org.objectweb.proactive.core.component.gen.Utils";
