@@ -36,7 +36,7 @@
 
 	<scm>
 		<connection>scm:hg:https://bitbucket.org/lp/proactive-maven-plugin</connection>
-		<developerConnection>scm:hg:https://bitbucket.org/lp/proactive-maven-plugin</developerConnection>
+		<developerConnection>scm:hg:ssh://hg@bitbucket.org/lp/proactive-maven-plugin</developerConnection>
 		<url>https://bitbucket.org/lp/proactive-maven-plugin</url>
 	</scm>
 
