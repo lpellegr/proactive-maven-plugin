@@ -9,7 +9,7 @@
 
 	<groupId>org.objectweb.proactive</groupId>
 	<artifactId>proactive-maven-plugin</artifactId>
-	<version>1.2.1</version>
+	<version>1.2.2-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>proactive-maven-plugin</name>
